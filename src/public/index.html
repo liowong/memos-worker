@@ -12,6 +12,21 @@
 	<link id='hljs-dark-theme' rel='stylesheet'
 				href='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css' disabled>
 	<link rel='icon' type='image/png' href='/favicon.png'>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css">
+<script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script>
+<style>
+  /* 适配 Memos UI 风格 */
+  .aplayer { 
+    margin: 12px 0 !important; 
+    border-radius: var(--border-radius-base) !important; 
+    background-color: var(--surface-color) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+  .aplayer .aplayer-lrc p { color: var(--text-secondary) !important; font-size: 14px !important; }
+  body[data-theme='dark'] .aplayer { background: #1a2234 !important; color: #fff !important; }
+  body[data-theme='dark'] .aplayer .aplayer-info .aplayer-music .aplayer-title { color: #eee !important; }
+</style>
 </head>
 <style>
   :root {
@@ -8705,5 +8720,57 @@
 		});
 		editorResizeObserver.observe(noteForm);
 		handleEditorLayout();
+	// --- START: 音乐播放器自动化逻辑 ---
+function initAudioPlayers() {
+    // 查找所有以 .mp3 结尾的 Markdown 链接
+    const musicLinks = document.querySelectorAll('.note-content a[href$=".mp3"]');
+    
+    musicLinks.forEach(link => {
+        if (link.dataset.playerInitialized) return;
+
+        const audioUrl = link.href;
+        // 自动推断歌词地址：将 .mp3 换成 .lrc (需确保 R2 里有同名歌词文件)
+        const lrcUrl = audioUrl.replace(/\.mp3$/, '.lrc');
+        const songName = link.innerText.replace('音乐: ', '') || 'Leon的收藏';
+
+        // 创建播放器容器
+        const container = document.createElement('div');
+        container.className = 'memos-audio-player';
+        link.parentNode.insertBefore(container, link);
+        link.style.display = 'none'; // 隐藏原始链接
+
+        const ap = new APlayer({
+            container: container,
+            lrcType: 3, // 开启外部 LRC 文件支持
+            theme: '#367cff',
+            audio: [{
+                name: songName,
+                artist: 'Memos Cloud',
+                url: audioUrl,
+                lrc: lrcUrl,
+                cover: 'https://cdn.jsdelivr.net/gh/memos-pub/memos/public/logo.webp'
+            }]
+        });
+
+        // 标记已处理，防止重复加载
+        link.dataset.playerInitialized = "true";
+
+        // 自动播放处理：如果浏览器拦截，点击页面任意位置后尝试播放
+        ap.on('error', () => {
+            console.log("Autoplay blocked, waiting for interaction...");
+            document.addEventListener('click', () => ap.play(), { once: true });
+        });
+    });
+}
+
+// 监听动态加载的笔记 (瀑布流或滚动加载)
+const musicObserver = new MutationObserver(() => {
+    initAudioPlayers();
+});
+musicObserver.observe(document.body, { childList: true, subtree: true });
+
+// 初始化执行
+initAudioPlayers();
+// --- END: 音乐播放器自动化逻辑 ---
 	// });
 </script>
