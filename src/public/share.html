@@ -8,6 +8,17 @@
 	<link id='hljs-light-theme' rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css'>
 	<link id='hljs-dark-theme' rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css' disabled>
 	<link rel='icon' type='image/png' href='/favicon.png'>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css">
+<script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script>
+<style>
+  /* 适配 Memos 的 UI 风格 */
+  .aplayer { 
+    margin: 10px 0 !important; 
+    border-radius: 8px !important; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    background: var(--surface-color, #fff) !important;
+  }
+</style>
 </head>
 <style>
   :root {
@@ -97,7 +108,45 @@
 		</div>
 	</main>
 </div>
+<script>
+  // 定义音乐拦截器
+  function injectMusicPlayer() {
+    // 查找所有指向 .mp3 的链接
+    const audioLinks = document.querySelectorAll('.note-content a[href$=".mp3"]');
+    
+    audioLinks.forEach(link => {
+      if (link.dataset.processed) return;
+      
+      const audioUrl = link.href;
+      const lrcUrl = audioUrl.replace(/\.mp3$/, '.lrc'); // 默认歌词与歌曲同名
+      const container = document.createElement('div');
+      
+      link.parentNode.insertBefore(container, link);
+      link.style.display = 'none'; // 隐藏原始链接
 
+      const ap = new APlayer({
+        container: container,
+        lrcType: 3, // 关键：开启外部 LRC 文件解析
+        autoplay: false, // 现代浏览器必须由用户触发播放
+        audio: [{
+          name: link.innerText || 'Leon的音乐',
+          artist: 'Leon Memos',
+          url: audioUrl,
+          lrc: lrcUrl,
+          cover: 'https://cdn.jsdelivr.net/gh/memos-pub/memos/public/logo.webp'
+        }]
+      });
+      
+      link.dataset.processed = "true";
+    });
+  }
+
+  // 使用 MutationObserver 监听瀑布流滚动加载的新内容
+  const observer = new MutationObserver(() => {
+    injectMusicPlayer();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+</script>
 <script>
 	const themeToggleBtn = document.getElementById('theme-toggle-btn');
 	const mainContent = document.getElementById('main-content');
